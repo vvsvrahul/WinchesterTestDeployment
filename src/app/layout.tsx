@@ -57,7 +57,7 @@ export default function RootLayout({
           toastOptions={{
             classNames: {
               success: "!bg-green-300",
-              info: "!bg-blue-300",
+              info: "!bg-blue-300 ",
               warning: "!bg-orange-300",
               error: "!bg-red-300",
             },
