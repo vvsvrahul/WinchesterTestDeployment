@@ -61,48 +61,26 @@ jobs:
           # 3) Public assets
           if [ -d "public" ]; then cp -R public package/public; fi
 
-          # 4) web.config for IIS on Windows App Service
+          # 4) web.config for IIS on Windows App Service (using HttpPlatformHandler)
           cat > package/web.config << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <configuration>
-            <appSettings>
-              <add key="WEBSITE_NODE_DEFAULT_VERSION" value="~20" />
-            </appSettings>
             <system.webServer>
               <handlers>
-                <add name="iisnode" path="server.js" verb="*" modules="iisnode" />
+                <add name="httpPlatformHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" />
               </handlers>
 
-              <iisnode
-                watchedFiles="web.config"
-                loggingEnabled="true"
-                logDirectory="iisnode"
-                debuggingEnabled="false" />
-
-              <rewrite>
-                <rules>
-                  <!-- Serve static files from .next/static -->
-                  <rule name="NextStaticFiles" stopProcessing="true">
-                    <match url="^_next/static/(.*)" />
-                    <action type="Rewrite" url=".next/static/{R:1}" />
-                  </rule>
-
-                  <!-- Serve public folder files -->
-                  <rule name="PublicFiles" stopProcessing="true">
-                    <match url="^(.*)" />
-                    <conditions logicalGrouping="MatchAll">
-                      <add input="{REQUEST_FILENAME}" matchType="IsFile" />
-                    </conditions>
-                    <action type="None" />
-                  </rule>
-
-                  <!-- All other requests go to Next.js -->
-                  <rule name="DynamicContent">
-                    <match url="(.*)" />
-                    <action type="Rewrite" url="server.js" />
-                  </rule>
-                </rules>
-              </rewrite>
+              <httpPlatform processPath="%ProgramFiles%\nodejs\node.exe"
+                            arguments="server.js"
+                            startupTimeLimit="60"
+                            startupRetryCount="3"
+                            stdoutLogEnabled="true"
+                            stdoutLogFile=".\logs\nodejs">
+                <environmentVariables>
+                  <environmentVariable name="PORT" value="%HTTP_PLATFORM_PORT%" />
+                  <environmentVariable name="NODE_ENV" value="production" />
+                </environmentVariables>
+              </httpPlatform>
 
               <staticContent>
                 <mimeMap fileExtension=".json" mimeType="application/json" />
@@ -112,6 +90,9 @@ jobs:
             </system.webServer>
           </configuration>
           EOF
+
+          # Create logs directory for httpPlatformHandler
+          mkdir -p package/logs
 
           # 5) Sanity checks
           echo "=== Build Verification ==="
