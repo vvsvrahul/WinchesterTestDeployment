@@ -11,7 +11,7 @@ env:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -31,13 +31,12 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
           # Environment variables with NEXT_PUBLIC_ prefix are baked into the client bundle at build time
-          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
           NEXT_PUBLIC_NODE_ENV: "production"
           NEXT_PUBLIC_APP_ENV: "production"
-          NEXT_PUBLIC_LOGIN_URL: ${{ secrets.NEXT_PUBLIC_LOGIN_URL }}
-          NEXT_PUBLIC_AZURE_APP_ID: ${{ secrets.NEXT_PUBLIC_AZURE_APP_ID }}
-          NEXT_PUBLIC_B2C_AUTORITY: ${{ secrets.NEXT_PUBLIC_B2C_AUTORITY }}
-          NEXT_PUBLIC_SCOPE: ${{ secrets.NEXT_PUBLIC_SCOPE }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_AZURE_AD_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_AZURE_AD_CLIENT_ID }}
+          NEXT_PUBLIC_AZURE_AD_TENANT_ID: ${{ secrets.NEXT_PUBLIC_AZURE_AD_TENANT_ID }}
+          NEXT_PUBLIC_REDIRECT_URI: ${{ secrets.NEXT_PUBLIC_REDIRECT_URI }}
 
       - name: Verify Next standalone build exists
         run: |
@@ -133,7 +132,7 @@ jobs:
 
   # ---------- DEV DEPLOY (master) ----------
   deploy_dev:
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/master'
     environment:
