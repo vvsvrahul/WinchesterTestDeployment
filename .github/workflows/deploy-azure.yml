@@ -51,7 +51,8 @@ jobs:
           mkdir -p package
 
           # 1) Copy standalone server (includes node_modules with only required dependencies)
-          cp -R .next/standalone/* package/
+          # Use /. to include hidden folders like .next
+          cp -R .next/standalone/. package/
 
           # 2) Copy static files - CRITICAL for Next.js to work
           mkdir -p package/.next/static
@@ -64,13 +65,15 @@ jobs:
           cat > package/web.config << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
           <configuration>
+            <appSettings>
+              <add key="WEBSITE_NODE_DEFAULT_VERSION" value="~20" />
+            </appSettings>
             <system.webServer>
               <handlers>
                 <add name="iisnode" path="server.js" verb="*" modules="iisnode" />
               </handlers>
 
               <iisnode
-                nodeProcessCommandLine="node"
                 watchedFiles="web.config"
                 loggingEnabled="true"
                 logDirectory="iisnode"
