@@ -70,7 +70,7 @@ jobs:
                 <add name="httpPlatformHandler" path="*" verb="*" modules="httpPlatformHandler" resourceType="Unspecified" />
               </handlers>
 
-              <httpPlatform processPath="%ProgramFiles(x86)%\nodejs\node.exe"
+              <httpPlatform processPath="%ProgramFiles(x86)%\nodejs\20.19.4\node.exe"
                             arguments="server.js"
                             startupTimeLimit="60"
                             startupRetryCount="3"
