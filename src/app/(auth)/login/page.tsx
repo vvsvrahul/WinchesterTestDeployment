@@ -1,0 +1,58 @@
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useLoginStore } from "@/store";
+import Image from "next/image";
+import { companyLogoFullImage } from "@/config";
+import "@/app/globals.css";
+import { useRouter } from "next/navigation";
+// import "../globals.css";
+
+export default function LoginPage() {
+  const { setLogin, login } = useLoginStore();
+  const router = useRouter();
+
+  const handleLogin = () => {
+    setLogin(true);
+    router.push("/");
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-white px-6">
+      <Card className="w-full max-w-md rounded-2xl shadow-lg">
+        <CardHeader className="text-center">
+          {/* Branding */}
+          <div className="flex justify-center items-center space-x-2 mb-2">
+            <Image
+              src={companyLogoFullImage}
+              width={200}
+              height={25}
+              alt="Winchester Logo"
+            />
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex justify-center">
+          <Button
+            onClick={handleLogin}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {/* Microsoft Logo (SVG) */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 23 23"
+              className="w-5 h-5"
+            >
+              <rect width="10" height="10" x="1" y="1" fill="#f25022" />
+              <rect width="10" height="10" x="12" y="1" fill="#7fba00" />
+              <rect width="10" height="10" x="1" y="12" fill="#00a4ef" />
+              <rect width="10" height="10" x="12" y="12" fill="#ffb900" />
+            </svg>
+            Sign in with Microsoft
+          </Button>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

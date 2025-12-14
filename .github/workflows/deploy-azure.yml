@@ -1,0 +1,152 @@
+name: Deploy Next.js (SSR) to Azure App Service (Windows)
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: {}
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Build (Next.js standalone)
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          # Environment variables with NEXT_PUBLIC_ prefix are baked into the client bundle at build time
+          NEXT_PUBLIC_API_BASE_URL: ${{ secrets.NEXT_PUBLIC_API_BASE_URL }}
+          NEXT_PUBLIC_NODE_ENV: "production"
+          NEXT_PUBLIC_APP_ENV: "production"
+          NEXT_PUBLIC_LOGIN_URL: ${{ secrets.NEXT_PUBLIC_LOGIN_URL }}
+          NEXT_PUBLIC_AZURE_APP_ID: ${{ secrets.NEXT_PUBLIC_AZURE_APP_ID }}
+          NEXT_PUBLIC_B2C_AUTORITY: ${{ secrets.NEXT_PUBLIC_B2C_AUTORITY }}
+          NEXT_PUBLIC_SCOPE: ${{ secrets.NEXT_PUBLIC_SCOPE }}
+
+      - name: Verify Next standalone build exists
+        run: |
+          ls -la .next || true
+          test -f .next/standalone/server.js || (echo "ERROR: No standalone build found. Make sure output:'standalone' is in next.config.ts" && exit 1)
+
+      - name: Stage minimal runtime for App Service (SSR)
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf package
+          mkdir -p package
+
+          # 1) Copy standalone server (includes node_modules with only required dependencies)
+          cp -R .next/standalone/* package/
+
+          # 2) Copy static files - CRITICAL for Next.js to work
+          mkdir -p package/.next/static
+          cp -R .next/static/* package/.next/static/
+
+          # 3) Public assets
+          if [ -d "public" ]; then cp -R public package/public; fi
+
+          # 4) web.config for IIS on Windows App Service
+          cat > package/web.config << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <system.webServer>
+              <handlers>
+                <add name="iisnode" path="server.js" verb="*" modules="iisnode" />
+              </handlers>
+
+              <iisnode
+                nodeProcessCommandLine="node"
+                watchedFiles="web.config"
+                loggingEnabled="true"
+                logDirectory="iisnode"
+                debuggingEnabled="false" />
+
+              <rewrite>
+                <rules>
+                  <!-- Serve static files from .next/static -->
+                  <rule name="NextStaticFiles" stopProcessing="true">
+                    <match url="^_next/static/(.*)" />
+                    <action type="Rewrite" url=".next/static/{R:1}" />
+                  </rule>
+
+                  <!-- Serve public folder files -->
+                  <rule name="PublicFiles" stopProcessing="true">
+                    <match url="^(.*)" />
+                    <conditions logicalGrouping="MatchAll">
+                      <add input="{REQUEST_FILENAME}" matchType="IsFile" />
+                    </conditions>
+                    <action type="None" />
+                  </rule>
+
+                  <!-- All other requests go to Next.js -->
+                  <rule name="DynamicContent">
+                    <match url="(.*)" />
+                    <action type="Rewrite" url="server.js" />
+                  </rule>
+                </rules>
+              </rewrite>
+
+              <staticContent>
+                <mimeMap fileExtension=".json" mimeType="application/json" />
+              </staticContent>
+
+              <httpErrors existingResponse="PassThrough" />
+            </system.webServer>
+          </configuration>
+          EOF
+
+          # 5) Sanity checks
+          echo "=== Build Verification ==="
+          test -f package/server.js && echo "OK: server.js exists" || (echo "FAIL: server.js missing" && exit 1)
+          test -d package/.next/static && echo "OK: .next/static exists" || (echo "FAIL: .next/static missing" && exit 1)
+          echo "=== Package contents ==="
+          ls -la package/
+          echo "=== .next contents ==="
+          ls -la package/.next/
+
+          # 6) Zip for deploy
+          (cd package && zip -r ../deploy.zip .)
+          echo "=== Deploy zip created ==="
+          ls -lh deploy.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-ssr-deploy
+          path: deploy.zip
+
+  # ---------- DEV DEPLOY (master) ----------
+  deploy_dev:
+    runs-on: self-hosted
+    needs: build
+    if: github.ref == 'refs/heads/master'
+    environment:
+      name: Development
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: next-ssr-deploy
+          path: .
+
+      - name: Deploy to Azure App Service (Zip Deploy) - DEV
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: webapp-va-win-dev-primerdroptest-fe
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: deploy.zip
