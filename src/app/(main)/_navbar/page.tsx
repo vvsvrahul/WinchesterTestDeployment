@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { companyLogoShortImage } from "@/config";
 import Image from "next/image";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { AvatarFallback } from "@radix-ui/react-avatar";
 import { LogOut, LucideProps } from "lucide-react";
 import {
@@ -16,25 +16,23 @@ import {
   MenubarTrigger,
 } from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
-import { useLoginStore } from "@/store";
+import { useMsal } from "@azure/msal-react";
 import { usePathname, useRouter } from "next/navigation";
 
 export default function Navbar(): React.JSX.Element {
-  const { setLogin, username } = useLoginStore();
+  const { instance, accounts } = useMsal();
   const pathname = usePathname();
   const router = useRouter();
-  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
 
+  const username = accounts[0]?.name || "User";
   
   const generateInitials = (name: string): string => {
     if (!name) return "U";
     
     const words = name.trim().split(" ");
     if (words.length === 1) {
-      
       return words[0].substring(0, 2).toUpperCase();
     } else {
-      
       return words.map(word => word.charAt(0)).join("").toUpperCase();
     }
   };
@@ -78,9 +76,15 @@ export default function Navbar(): React.JSX.Element {
     {
       title: "Logout",
       shortcut: LogOut,
-      onclick: () => {
-        setLogin(false);
-        router.push("/login");
+      onclick: async () => {
+        try {
+          instance.setActiveAccount(null);
+          await instance.clearCache();
+          router.push("/login?logout=true");
+        } catch (error) {
+          console.error("Logout error:", error);
+          router.push("/login?logout=true");
+        }
       },
     },
   ];
@@ -123,7 +127,7 @@ export default function Navbar(): React.JSX.Element {
                 className={`!bg-black hover:!text-red-600 ${
                   pathname.startsWith('/admin') ? '!text-red-600' : '!text-white'
                 }`}
-                onClick={() => setAdminMenuOpen(!adminMenuOpen)}
+                onClick={() => {}}
               >
                 <div className="flex gap-2 cursor-pointer items-center">
                   <p className="text-xl font-semibold">Admin</p>
@@ -139,10 +143,7 @@ export default function Navbar(): React.JSX.Element {
                     <MenubarItem 
                       key={`admin-option-${idx}`} 
                       className="w-full py-1 data-[highlighted]:!bg-red-800 data-[highlighted]:!text-white transition-colors"
-                      onClick={() => {
-                        setAdminMenuOpen(false);
-                        router.push(option.link);
-                      }}
+                      onClick={() => router.push(option.link)}
                     >
                       <div className="w-full flex justify-between items-center text-lg font-medium text-white transition-colors cursor-pointer">
                         {option.title}

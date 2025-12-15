@@ -13,6 +13,8 @@
     "npm": ">=10.0.0"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.25.1",
+    "@azure/msal-react": "^3.0.20",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.4",
@@ -43,9 +45,9 @@
     "material-react-table": "^3.2.1",
     "next": "15.5.4",
     "next-themes": "^0.4.6",
-    "react": "19.1.0",
+    "react": "19.2.3",
     "react-day-picker": "^9.11.1",
-    "react-dom": "19.1.0",
+    "react-dom": "19.2.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
     "yup": "^1.7.1",

@@ -1,21 +1,36 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useLoginStore } from "@/store";
 import Image from "next/image";
 import { companyLogoFullImage } from "@/config";
 import "@/app/globals.css";
-import { useRouter } from "next/navigation";
-// import "../globals.css";
+import { useIsAuthenticated, useMsal } from "@azure/msal-react";
+import { loginRequest } from "@/config/msalConfig";
+import { InteractionStatus } from "@azure/msal-browser";
+import { useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function LoginPage() {
-  const { setLogin, login } = useLoginStore();
+  const { instance, inProgress } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isLoading = inProgress !== InteractionStatus.None;
+  const isLogout = searchParams.get("logout") === "true";
 
-  const handleLogin = () => {
-    setLogin(true);
-    router.push("/");
+  useEffect(() => {
+    if (isAuthenticated && !isLogout) {
+      router.replace("/drop-test");
+    }
+  }, [isAuthenticated, isLogout, router]);
+
+  const handleLogin = async () => {
+    try {
+      await instance.loginRedirect(loginRequest);
+    } catch (error) {
+      console.error("Login error:", error);
+    }
   };
 
   return (
@@ -36,7 +51,8 @@ export default function LoginPage() {
         <CardContent className="flex justify-center">
           <Button
             onClick={handleLogin}
-            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer"
+            disabled={isLoading}
+            className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
           >
             {/* Microsoft Logo (SVG) */}
             <svg
@@ -49,7 +65,7 @@ export default function LoginPage() {
               <rect width="10" height="10" x="1" y="12" fill="#00a4ef" />
               <rect width="10" height="10" x="12" y="12" fill="#ffb900" />
             </svg>
-            Sign in with Microsoft
+            {isLoading ? "Signing in..." : "Sign in with Microsoft"}
           </Button>
         </CardContent>
       </Card>

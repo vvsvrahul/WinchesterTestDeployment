@@ -4,26 +4,15 @@ import Navbar from "./_navbar/page";
 import "../globals.css";
 import FooterPage from "./_footer/page";
 import { AppBreadcrumb } from "./_breadcrumb/page";
-import { useLoginStore } from "@/store";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { AuthGuard } from "@/components/AuthGuard";
 
 export default function MainLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { login } = useLoginStore();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!login) {
-      router.push("/login");
-    }
-  }, [login, router]);
-
   return (
-    <>
+    <AuthGuard>
       <header className="sticky top-0 w-full z-50">
         <Navbar />
       </header>
@@ -36,6 +25,6 @@ export default function MainLayout({
       <footer className="sticky bottom-0 w-full z-50">
         <FooterPage />
       </footer>
-    </>
+    </AuthGuard>
   );
 }

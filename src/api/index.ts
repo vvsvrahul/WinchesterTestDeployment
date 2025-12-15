@@ -1,6 +1,6 @@
 import axios from "axios";
-
 import { config, HTTP_METHODS } from "@/config";
+import { msalInstance, loginRequest } from "@/config/msalConfig";
 
 /**
  * Creates an Axios instance with default base URL and headers.
@@ -11,6 +11,54 @@ const axiosInstance = axios.create({
     ...config.baseHeaders,
   },
 });
+
+let cachedToken: { token: string; expiry: number } | null = null;
+
+axiosInstance.interceptors.request.use(
+  async (config) => {
+    const accounts = msalInstance.getAllAccounts();
+    
+    if (accounts.length > 0) {
+      try {
+        const now = Date.now();
+        if (cachedToken && cachedToken.expiry > now + 60000) {
+          config.headers.Authorization = `Bearer ${cachedToken.token}`;
+          return config;
+        }
+
+        const response = await msalInstance.acquireTokenSilent({
+          ...loginRequest,
+          account: accounts[0],
+        });
+        
+        cachedToken = {
+          token: response.accessToken,
+          expiry: response.expiresOn?.getTime() || (now + 3600000),
+        };
+        
+        config.headers.Authorization = `Bearer ${response.accessToken}`;
+      } catch (error) {
+        console.error("Failed to acquire token:", error);
+        cachedToken = null;
+      }
+    }
+    
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      console.error("Unauthorized - API returned 401");
+    }
+    return Promise.reject(error);
+  }
+);
 
 /**
  * Object containing HTTP method functions for making API requests.

@@ -234,7 +234,7 @@ export const InputSelectTrigger = forwardRef<
       >
         {selectedValue ? (
           <div className="flex items-center justify-between w-full">
-            <div className="flex flex-wrap items-center px-2">
+            <div className="flex items-center px-2 flex-1 min-w-0">
               {[selectedValue].map((value, index) => {
                 const option = options.find((o) => o.value === value);
 
@@ -244,24 +244,26 @@ export const InputSelectTrigger = forwardRef<
 
                 if (children) {
                   return (
-                    <div key={`${index}-${value}`}>{children(option)}</div>
+                    <div key={`${index}-${value}`} className="truncate">
+                      {children(option)}
+                    </div>
                   );
                 }
 
                 return (
                   <div
                     key={`${index}-${value}`}
-                    className={cn("text-foreground")}
+                    className={cn("text-foreground truncate flex items-center")}
                   >
                     {option?.icon && (
-                      <option.icon className="mr-1 h-3.5 w-3.5" />
+                      <option.icon className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
                     )}
-                    {option?.label}
+                    <span className="truncate">{option?.label}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-shrink-0">
               {selectedValue && clearable && (
                 <>
                   <X
